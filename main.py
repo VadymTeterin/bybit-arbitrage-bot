@@ -25,6 +25,7 @@ async def check_arbitrage():
         f"✅ Бот Bybit Arbitrage успішно ЗАПУЩЕНО!\n\n"
         f"🔍 Пошук арбітражу між спотом і ф’ючерсами розпочато.\n"
         f"⏰ {start_time}\n\n"
+        f"Мінімальний обсяг торгів (24h): {config['bybit'].get('min_volume', 100000)} USDT\n"
         f"Бажаю прибуткових сигналів! 🚀"
     )
     await notifier.send_message(start_msg)
@@ -35,15 +36,18 @@ async def check_arbitrage():
             print("Бот запущено, шукаю арбітраж...")
 
             current_time = time.time()
+            # --- Отримуємо монети з обсягом > min_volume ---
             if current_time - symbols_cache["last_update"] > cache_ttl or not symbols_cache["symbols"]:
-                symbols_cache["symbols"] = bybit.get_spot_symbols()
+                symbols_cache["symbols"] = bybit.get_spot_symbols(config['bybit'].get('min_volume', 100000))
                 symbols_cache["last_update"] = current_time
                 log_info(f"Оновлено кеш символів ({len(symbols_cache['symbols'])})")
             symbols = symbols_cache["symbols"]
 
             results = []
 
-            for symbol in symbols:
+            for symbol_data in symbols:
+                symbol = symbol_data["symbol"]
+                # volume = symbol_data["volume"]  # якщо захочеш додати у повідомлення
                 spot_price = bybit.get_price(symbol, category="spot")
                 futures_price = bybit.get_price(symbol, category="linear")
 
@@ -54,7 +58,8 @@ async def check_arbitrage():
                             "symbol": symbol,
                             "spot_price": spot_price,
                             "futures_price": futures_price,
-                            "difference": difference
+                            "difference": difference,
+                            "volume": symbol_data["volume"]
                         })
                 await asyncio.sleep(0.1)
 
@@ -67,7 +72,8 @@ async def check_arbitrage():
                         f"{i}) {res['symbol']}\n"
                         f"   Спот: {res['spot_price']}\n"
                         f"   Ф'ючерси: {res['futures_price']}\n"
-                        f"   Різниця: {res['difference']:.2f}%\n\n"
+                        f"   Різниця: {res['difference']:.2f}%\n"
+                        f"   Обсяг 24h: {int(res['volume']):,} USDT\n\n"
                     )
                 await notifier.send_message(msg)
                 log_info(msg)
@@ -119,3 +125,4 @@ async def check_arbitrage():
 
 if __name__ == "__main__":
     asyncio.run(check_arbitrage())
+
