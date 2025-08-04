@@ -137,5 +137,5 @@ FAQ
 MIT License.
 Використовуй на свій страх і ризик.
 
-Автор: [Твоє ім'я або нікнейм]
-З питаннями — у Telegram: @yourusername
+Автор: VadymTeterin
+З питаннями — у Telegram: @IIIpekk
