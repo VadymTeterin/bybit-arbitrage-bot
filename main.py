@@ -13,6 +13,11 @@ notifier = TelegramNotifier(config['telegram']['bot_token'], config['telegram'][
 async def check_arbitrage():
     while True:
         symbols = bybit.get_spot_symbols()
+        if not symbols:
+            log_info("Список символів порожній, повторю спробу через 10 секунд...")
+            await asyncio.sleep(10)
+            continue
+
         for symbol in symbols:
             spot_price = bybit.get_price(symbol, category="spot")
             futures_price = bybit.get_price(symbol, category="linear")
@@ -28,8 +33,10 @@ async def check_arbitrage():
                     )
                     await notifier.send_message(msg)
                     log_info(msg)
+
+            await asyncio.sleep(0.1)  # Невелика пауза для зменшення навантаження на API
+
         await asyncio.sleep(config['bybit']['request_interval'])
 
 if __name__ == "__main__":
     asyncio.run(check_arbitrage())
-
