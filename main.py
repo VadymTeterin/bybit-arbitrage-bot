@@ -1,6 +1,7 @@
 import asyncio
 import yaml
 import time
+from datetime import datetime
 from bybit_api import BybitClient
 from telegram_bot import TelegramNotifier
 from logger import log_info
@@ -18,10 +19,16 @@ prev_top = []
 async def check_arbitrage():
     global prev_top
 
-    # Стартове повідомлення
-    start_msg = "Бот запущено, шукаю арбітраж..."
+    # Красиве стартове повідомлення
+    start_time = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
+    start_msg = (
+        f"✅ Бот Bybit Arbitrage успішно ЗАПУЩЕНО!\n\n"
+        f"🔍 Пошук арбітражу між спотом і ф’ючерсами розпочато.\n"
+        f"⏰ {start_time}\n\n"
+        f"Бажаю прибуткових сигналів! 🚀"
+    )
     await notifier.send_message(start_msg)
-    log_info(start_msg)
+    log_info("Бот запущено")
 
     try:
         while True:
@@ -74,23 +81,41 @@ async def check_arbitrage():
             await asyncio.sleep(config['bybit']['request_interval'])
 
     except Exception as e:
-        # Обробляємо неочікувану помилку
-        error_msg = f"Бот аварійно зупинено: {str(e)}"
+        # Аварійна зупинка з інформативним повідомленням
+        stop_time = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
+        error_msg = (
+            f"⛔️ Бот Bybit Arbitrage ЗУПИНЕНО!\n\n"
+            f"🛑 Моніторинг арбітражу вимкнено через помилку.\n"
+            f"⏰ {stop_time}\n\n"
+            f"Помилка: {str(e)}"
+        )
         await notifier.send_message(error_msg)
         log_info(error_msg)
         raise
 
     except KeyboardInterrupt:
-        # Якщо натиснули Ctrl+C — обробляємо зупинку вручну
-        stop_msg = "Бот зупинено"
+        # Ручна зупинка
+        stop_time = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
+        stop_msg = (
+            f"⛔️ Бот Bybit Arbitrage ЗУПИНЕНО!\n\n"
+            f"🛑 Моніторинг арбітражу вимкнено вручну.\n"
+            f"⏰ {stop_time}\n\n"
+            f"Бот коректно зупинено за запитом користувача."
+        )
         await notifier.send_message(stop_msg)
         log_info(stop_msg)
 
     finally:
-        # Гарантовано надсилаємо повідомлення при завершенні
-        stop_msg = "Бот зупинено"
-        await notifier.send_message(stop_msg)
-        log_info(stop_msg)
+        # Повідомлення про зупинку у будь-якому разі (як резерв)
+        stop_time = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
+        final_msg = (
+            f"⛔️ Бот Bybit Arbitrage ЗУПИНЕНО!\n\n"
+            f"🛑 Моніторинг арбітражу вимкнено.\n"
+            f"⏰ {stop_time}\n\n"
+            f"Перевір роботу, якщо зупинка була неочікуваною!"
+        )
+        await notifier.send_message(final_msg)
+        log_info(final_msg)
 
 if __name__ == "__main__":
     asyncio.run(check_arbitrage())
