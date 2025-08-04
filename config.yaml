@@ -1,0 +1,9 @@
+bybit:
+  api_key: "..."
+  api_secret: "..."
+  arbitrage_difference: 1.0
+  request_interval: 3
+
+telegram:
+  bot_token: "..."
+  chat_id: "..."
