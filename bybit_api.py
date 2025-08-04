@@ -1,7 +1,6 @@
 from pybit.unified_trading import HTTP
 from logger import log_info, log_error
 
-
 class BybitClient:
     def __init__(self, api_key, api_secret):
         self.client = HTTP(api_key=api_key, api_secret=api_secret)
@@ -26,4 +25,3 @@ class BybitClient:
         except Exception as e:
             log_error(f"Помилка отримання ціни {symbol} ({category}): {e}")
             return None
-

@@ -1,7 +1,7 @@
 bybit:
   api_key: "KEN0Ic8O7D9keqTTMF65"
   api_secret: "eW4iCtH2r3dOK8UpHwJECFXrfIj02UNsjSh2"
-  arbitrage_difference: 0.5
+  arbitrage_difference: 0.01
   request_interval: 3
 
 telegram:
