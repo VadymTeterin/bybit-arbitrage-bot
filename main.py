@@ -12,6 +12,7 @@ notifier = TelegramNotifier(config['telegram']['bot_token'], config['telegram'][
 
 async def check_arbitrage():
     while True:
+        print("Бот запущено, шукаю арбітраж...")
         symbols = bybit.get_spot_symbols()
         if not symbols:
             log_info("Список символів порожній, повторю спробу через 10 секунд...")
