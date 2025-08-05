@@ -1,7 +1,7 @@
 bybit:
   api_key: "KEN0Ic8O7D9keqTTMF65"
   api_secret: "eW4iCtH2r3dOK8UpHwJECFXrfIj02UNsjSh2"
-  arbitrage_difference: 0.01                           ## арбітражна різниця
+  arbitrage_difference: 0.001                           ## арбітражна різниця
   request_interval: 5                                ## інтервал запитів в секундах
   min_volume: 100000                           # Мінімальний обсяг торгів за 24 години (USDT)
 
