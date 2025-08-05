@@ -7,6 +7,8 @@ from telegram_bot import TelegramNotifier
 from logger import log_info
 from arbitrage_blocks import get_spot_futures_arbitrage, get_margin_futures_arbitrage
 
+EXCHANGE_NAME = "Bybit"
+
 with open('config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
@@ -24,6 +26,7 @@ async def check_arbitrage():
     # Красиве стартове повідомлення
     start_time = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
     start_msg = (
+        f"🌐 Біржа: {EXCHANGE_NAME}\n\n"
         f"✅ Бот Bybit Arbitrage успішно ЗАПУЩЕНО!\n\n"
         f"🔍 Пошук арбітражу між спотом, маржею і ф’ючерсами розпочато.\n"
         f"⏰ {start_time}\n\n"
@@ -48,7 +51,7 @@ async def check_arbitrage():
             top_spot = await get_spot_futures_arbitrage(bybit, symbols, config)
             top_margin = await get_margin_futures_arbitrage(bybit, symbols, config)
 
-            msg = ""
+            msg = f"🌐 Біржа: {EXCHANGE_NAME}\n\n"
             updated = False
 
             if top_spot and top_spot != prev_top_spot:
@@ -60,11 +63,14 @@ async def check_arbitrage():
                 msg += "🚨 ТОП-5 арбітражів СПОТ - Ф'ЮЧЕРСИ:\n\n"
                 if top_spot:
                     for i, res in enumerate(top_spot, 1):
+                        emoji = "🚀" if res.get('is_special') else "💹"
+                        special = "⚡️ <b>SPECIAL ALERT!</b> ⚡️\n" if res.get('is_special') else ""
                         msg += (
-                            f"{i}) {res['symbol']}\n"
+                            f"{emoji} {i}) {res['symbol']}\n"
                             f"   Спот: {res['spot_price']}\n"
                             f"   Ф'ючерси: {res['futures_price']}\n"
                             f"   Різниця: {res['difference']:.2f}%\n"
+                            f"{special}"
                             f"   Обсяг 24h: {int(res['volume']):,} USDT\n\n"
                         )
                 else:
@@ -74,17 +80,22 @@ async def check_arbitrage():
                 msg += f"🚨 ТОП-5 арбітражів МАРЖА - Ф'ЮЧЕРСИ:\n\n"
                 if top_margin:
                     for i, res in enumerate(top_margin, 1):
+                        emoji = "🔥" if res.get('is_special') else "💹"
+                        special = "⚡️ <b>SPECIAL ALERT!</b> ⚡️\n" if res.get('is_special') else ""
                         msg += (
-                            f"{i}) {res['symbol']}\n"
+                            f"{emoji} {i}) {res['symbol']}\n"
                             f"   Маржа: {res['margin_price']}\n"
                             f"   Ф'ючерси: {res['futures_price']}\n"
                             f"   Різниця: {res['difference']:.2f}%\n"
+                            f"{special}"
                             f"   Обсяг 24h: {int(res['volume']):,} USDT\n\n"
                         )
                 else:
                     msg += "   Немає монет з арбітражем понад поріг\n\n"
 
-                await notifier.send_message(msg)
+                # Якщо серед топ-арбітражів є SPECIAL, надсилаємо гучну нотифікацію
+                loud = any(r.get('is_special') for r in top_spot + top_margin)
+                await notifier.send_message(msg, loud=loud)
                 log_info(msg)
                 prev_top_spot = top_spot.copy()
                 prev_top_margin = top_margin.copy()
@@ -96,6 +107,7 @@ async def check_arbitrage():
     except Exception as e:
         stop_time = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
         error_msg = (
+            f"🌐 Біржа: {EXCHANGE_NAME}\n\n"
             f"⛔️ Бот Bybit Arbitrage ЗУПИНЕНО!\n\n"
             f"🛑 Моніторинг арбітражу вимкнено через помилку.\n"
             f"⏰ {stop_time}\n\n"
@@ -108,6 +120,7 @@ async def check_arbitrage():
     except KeyboardInterrupt:
         stop_time = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
         stop_msg = (
+            f"🌐 Біржа: {EXCHANGE_NAME}\n\n"
             f"⛔️ Бот Bybit Arbitrage ЗУПИНЕНО!\n\n"
             f"🛑 Моніторинг арбітражу вимкнено вручну.\n"
             f"⏰ {stop_time}\n\n"
@@ -119,6 +132,7 @@ async def check_arbitrage():
     finally:
         stop_time = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
         final_msg = (
+            f"🌐 Біржа: {EXCHANGE_NAME}\n\n"
             f"⛔️ Бот Bybit Arbitrage ЗУПИНЕНО!\n\n"
             f"🛑 Моніторинг арбітражу вимкнено.\n"
             f"⏰ {stop_time}\n\n"
