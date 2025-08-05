@@ -6,9 +6,14 @@ class TelegramNotifier:
         self.bot = Bot(token=token)
         self.chat_id = chat_id
 
-    async def send_message(self, message):
+    async def send_message(self, message, loud=True):
         try:
-            await self.bot.send_message(chat_id=self.chat_id, text=message)
+            await self.bot.send_message(
+                chat_id=self.chat_id,
+                text=message,
+                parse_mode="HTML",
+                disable_notification=not loud  # True=тихо, False=зі звуком
+            )
             log_info("Повідомлення надіслано у Telegram")
         except Exception as e:
             log_error(f"Telegram помилка: {e}")
