@@ -8,7 +8,8 @@ async def get_spot_futures_arbitrage(bybit, symbols, config):
         spot_price = bybit.get_price(symbol, category="spot")
         futures_price = bybit.get_price(symbol, category="linear")
         if spot_price and futures_price:
-            difference = abs(futures_price - spot_price) / spot_price * 100
+            # ТІЛЬКИ якщо ф'ючерс дорожчий за спот!
+            difference = (futures_price - spot_price) / spot_price * 100
             if difference >= config['bybit']['arbitrage_difference']:
                 results.append({
                     "symbol": symbol,
@@ -27,7 +28,8 @@ async def get_margin_futures_arbitrage(bybit, symbols, config):
         margin_price = bybit.get_price(symbol, category="margin")
         futures_price = bybit.get_price(symbol, category="linear")
         if margin_price and futures_price:
-            difference = abs(futures_price - margin_price) / margin_price * 100
+            # ТІЛЬКИ якщо ф'ючерс дорожчий за маржу!
+            difference = (futures_price - margin_price) / margin_price * 100
             if difference >= config['bybit']['arbitrage_difference']:
                 results.append({
                     "symbol": symbol,
