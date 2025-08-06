@@ -1,10 +1,66 @@
-bybit:
-  api_key: "KEN0Ic8O7D9keqTTMF65"
-  api_secret: "eW4iCtH2r3dOK8UpHwJECFXrfIj02UNsjSh2"
-  arbitrage_difference: 0.001                           ## арбітражна різниця
-  request_interval: 5                                ## інтервал запитів в секундах
-  min_volume: 100000                           # Мінімальний обсяг торгів за 24 години (USDT)
+## біржові АРІ -ключі та налаштування
+exchanges:
+
+  bybit:
+    api_key: "N0Ic8O7D9keqTTMF65"
+    api_secret: "8351713346"
+    min_volume: 100000
+    enabled: true
+    request_interval: 2
+
+  binance:
+    api_key: "ТВОЙ_BINANCE_API_KEY"
+    api_secret: "ТВОЙ_BINANCE_API_SECRET"
+    min_volume: 100000
+    enabled: false
+    request_interval: 5
+
+  okx:
+    api_key: "..."
+    api_secret: "..."
+    min_volume: 100000
+    enabled: false
+    request_interval: 3
+
+  kucoin:
+    api_key: "..."
+    api_secret: "..."
+    min_volume: 100000
+    enabled: false
+    request_interval: 5
+
+  gateio:
+    api_key: "..."
+    api_secret: "..."
+    min_volume: 100000
+    enabled: false
+    request_interval: 4
+
+  bingx:
+    api_key: "..."
+    api_secret: "..."
+    min_volume: 100000
+    enabled: false
+    request_interval: 3
+
+  mexc:
+    api_key: "..."
+    api_secret: "..."
+    min_volume: 100000
+    enabled: false
+    request_interval: 3
+
+  htx:
+    api_key: "..."
+    api_secret: "..."
+    min_volume: 100000
+    enabled: false
+    request_interval: 4
+
+arbitrage_difference: 1.0      # Мінімальна різниця для арбітражу в %
+request_interval: 3            # Глобальний запасний інтервал (якщо в біржі не вказано)
 
 telegram:
   bot_token: "7048405854:AAGtvFrF__IvhzmxllTs0SYmFCWvEh26HAM" ## токен бота
   chat_id: "8351713346"
+
