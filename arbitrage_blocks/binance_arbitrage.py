@@ -1,3 +1,4 @@
+# Алгоритми для пошуку арбітражу SPOT-Ф'ЮЧЕРСИ та МАРЖА-Ф'ЮЧЕРСИ на Binance
 import asyncio
 
 async def get_spot_futures_arbitrage(binance, symbols, config):
