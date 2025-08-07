@@ -11,7 +11,6 @@ class BinanceClient:
     def get_spot_symbols(self, min_volume=100000):
         """Отримує всі spot-символи USDT із обсягом >= min_volume."""
         try:
-            # Використовуємо get_ticker() для отримання даних по всіх парах
             tickers = self.client.get_ticker()
             symbols = [
                 {"symbol": t["symbol"], "volume": float(t.get("quoteVolume", 0))}
@@ -51,7 +50,11 @@ class BinanceClient:
                     log_error(f"Binance {symbol} (linear): symbol not available for futures")
                     return None
                 futures = self.client.futures_symbol_ticker(symbol=symbol)
-                price = float(futures["price"])
+                price_val = futures.get("price")
+                if price_val is None:
+                    log_error(f"Binance {symbol} (linear): futures response has no price! {futures}")
+                    return None
+                price = float(price_val)
                 log_info(f"Binance FUTURES ціна {symbol}: {price}")
                 return price
             elif category == "margin":
