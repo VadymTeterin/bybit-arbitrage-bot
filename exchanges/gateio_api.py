@@ -14,7 +14,7 @@ class GateioClient:
         try:
             tickers = self.client.fetch_tickers()
             symbols = [
-                {"symbol": s, "volume": float(t["quoteVolume"]) }
+                {"symbol": s, "volume": float(t["quoteVolume"])}
                 for s, t in tickers.items()
                 if s.endswith("/USDT") and float(t["quoteVolume"]) >= min_volume
             ]
@@ -26,9 +26,27 @@ class GateioClient:
 
     def get_price(self, symbol, category="spot"):
         try:
-            price = float(self.client.fetch_ticker(symbol)["last"])
-            log_info(f"Gateio {category.upper()} ціна {symbol}: {price}")
-            return price
+            if category == "spot":
+                price = float(self.client.fetch_ticker(symbol)["last"])
+                log_info(f"Gateio SPOT ціна {symbol}: {price}")
+                return price
+            elif category == "linear":
+                # futures (swap) — шукаємо через fetch_markets
+                markets = self.client.fetch_markets()
+                fut_market = next((m for m in markets if m['base'] in symbol and m['type'] == 'swap'), None)
+                if fut_market:
+                    fut_symbol = fut_market['symbol']
+                    price = float(self.client.fetch_ticker(fut_symbol)["last"])
+                    log_info(f"Gateio FUTURES ціна {fut_symbol}: {price}")
+                    return price
+                return None
+            elif category == "margin":
+                price = float(self.client.fetch_ticker(symbol)["last"])
+                log_info(f"Gateio MARGIN ціна {symbol}: {price}")
+                return price
+            else:
+                log_error(f"Gateio: невідомий тип ринку {category}")
+                return None
         except Exception as e:
             log_error(f"Gateio помилка отримання ціни {symbol} ({category}): {e}")
             return None
