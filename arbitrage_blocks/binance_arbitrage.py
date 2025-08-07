@@ -1,50 +1,66 @@
-# Алгоритми для пошуку арбітражу SPOT-Ф'ЮЧЕРСИ та МАРЖА-Ф'ЮЧЕРСИ на Binance (v3.0m_05-08-25)
-import asyncio
+# exchanges/binance_api.py
+# Binance API-клієнт для мультибіржового арбітражного бота (v3.0m_05-08-25)
+from binance.client import Client
+from logger import log_info, log_error
 
-async def get_spot_futures_arbitrage(binance, symbols, config):
-    results = []
-    futures_symbols = binance.get_futures_symbols()
-    for symbol_data in symbols:
-        symbol = symbol_data["symbol"]
-        if symbol not in futures_symbols:
-            continue
-        spot_price = binance.get_price(symbol, category="spot")
-        futures_price = binance.get_price(symbol, category="linear")
-        if spot_price and futures_price:
-            difference = (futures_price - spot_price) / spot_price * 100
-            is_special = difference >= 2
-            if difference >= config['arbitrage_difference']:
-                results.append({
-                    "symbol": symbol,
-                    "spot_price": spot_price,
-                    "futures_price": futures_price,
-                    "difference": difference,
-                    "volume": symbol_data["volume"],
-                    "is_special": is_special
-                })
-        await asyncio.sleep(0.1)
-    return sorted(results, key=lambda x: x['difference'], reverse=True)[:5]
+class BinanceClient:
+    def __init__(self, api_key, api_secret):
+        self.client = Client(api_key, api_secret)
+        self._futures_symbols = None  # кеш для futures symbol
 
-async def get_margin_futures_arbitrage(binance, symbols, config):
-    results = []
-    futures_symbols = binance.get_futures_symbols()
-    for symbol_data in symbols:
-        symbol = symbol_data["symbol"]
-        if symbol not in futures_symbols:
-            continue
-        margin_price = binance.get_price(symbol, category="margin")
-        futures_price = binance.get_price(symbol, category="linear")
-        if margin_price and futures_price:
-            difference = (futures_price - margin_price) / margin_price * 100
-            is_special = difference >= 2
-            if difference >= config['arbitrage_difference']:
-                results.append({
-                    "symbol": symbol,
-                    "margin_price": margin_price,
-                    "futures_price": futures_price,
-                    "difference": difference,
-                    "volume": symbol_data["volume"],
-                    "is_special": is_special
-                })
-        await asyncio.sleep(0.1)
-    return sorted(results, key=lambda x: x['difference'], reverse=True)[:5]
+    def get_spot_symbols(self, min_volume=100000):
+        """Отримує всі spot-символи USDT із обсягом >= min_volume."""
+        try:
+            tickers = self.client.get_ticker_24hr()
+            symbols = [
+                {"symbol": t["symbol"], "volume": float(t["quoteVolume"])}
+                for t in tickers
+                if t["symbol"].endswith("USDT") and float(t["quoteVolume"]) >= min_volume
+            ]
+            log_info(f"Binance: отримано {len(symbols)} spot-символів з обсягом >= {min_volume}")
+            return symbols
+        except Exception as e:
+            log_error(f"Binance помилка отримання spot-символів: {e}")
+            return []
+
+    def get_futures_symbols(self):
+        """Отримує всі доступні futures symbol USDT для фільтрації."""
+        if self._futures_symbols is not None:
+            return self._futures_symbols
+        try:
+            info = self.client.futures_exchange_info()
+            self._futures_symbols = set(
+                symbol["symbol"] for symbol in info["symbols"] if symbol["quoteAsset"] == "USDT"
+            )
+            log_info(f"Binance: кешовано {len(self._futures_symbols)} futures-символів")
+            return self._futures_symbols
+        except Exception as e:
+            log_error(f"Binance помилка отримання списку futures-символів: {e}")
+            return set()
+
+    def get_price(self, symbol, category="spot"):
+        try:
+            if category == "spot":
+                price = float(self.client.get_symbol_ticker(symbol=symbol)["price"])
+                log_info(f"Binance SPOT ціна {symbol}: {price}")
+                return price
+            elif category == "linear":  # для USDT-margined futures
+                futures_symbols = self.get_futures_symbols()
+                if symbol not in futures_symbols:
+                    log_error(f"Binance {symbol} (linear): symbol not available for futures")
+                    return None
+                futures = self.client.futures_symbol_ticker(symbol=symbol)
+                price = float(futures["price"])
+                log_info(f"Binance FUTURES ціна {symbol}: {price}")
+                return price
+            elif category == "margin":
+                # Margin price = spot price (якщо потрібно — тут можна реалізувати через spot)
+                price = float(self.client.get_symbol_ticker(symbol=symbol)["price"])
+                log_info(f"Binance MARGIN ціна {symbol}: {price}")
+                return price
+            else:
+                log_error(f"Binance: невідомий тип ринку {category}")
+                return None
+        except Exception as e:
+            log_error(f"Binance помилка отримання ціни {symbol} ({category}): {e}")
+            return None
