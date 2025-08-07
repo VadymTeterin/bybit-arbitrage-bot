@@ -2,11 +2,13 @@
 # Binance API-клієнт для мультибіржового арбітражного бота (v3.0m_05-08-25)
 from binance.client import Client
 from logger import log_info, log_error
+import time
 
 class BinanceClient:
     def __init__(self, api_key, api_secret):
         self.client = Client(api_key, api_secret)
-        self._futures_symbols = None  # кеш для futures symbol
+        self._futures_symbols = None
+        self._futures_symbols_last_update = 0  # timestamp останнього оновлення
 
     def get_spot_symbols(self, min_volume=100000):
         """Отримує всі spot-символи USDT із обсягом >= min_volume."""
@@ -24,19 +26,22 @@ class BinanceClient:
             return []
 
     def get_futures_symbols(self):
-        """Отримує всі доступні futures symbol USDT для фільтрації."""
-        if self._futures_symbols is not None:
+        """Оновлює кеш futures-символів не частіше, ніж раз на 60 хвилин."""
+        cache_lifetime = 60 * 60  # 60 хвилин у секундах
+        now = time.time()
+        if self._futures_symbols is not None and now - self._futures_symbols_last_update < cache_lifetime:
             return self._futures_symbols
         try:
             info = self.client.futures_exchange_info()
             self._futures_symbols = set(
                 symbol["symbol"] for symbol in info["symbols"] if symbol["quoteAsset"] == "USDT"
             )
-            log_info(f"Binance: кешовано {len(self._futures_symbols)} futures-символів")
+            self._futures_symbols_last_update = now
+            log_info(f"Binance: кешовано {len(self._futures_symbols)} futures-символів (оновлено)")
             return self._futures_symbols
         except Exception as e:
             log_error(f"Binance помилка отримання списку futures-символів: {e}")
-            return set()
+            return self._futures_symbols if self._futures_symbols else set()
 
     def get_price(self, symbol, category="spot"):
         try:
