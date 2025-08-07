@@ -41,14 +41,25 @@ class BybitClient:
 
     def get_price(self, symbol, category="spot"):
         try:
-            data = self.client.get_tickers(category=category, symbol=symbol)
-            symbol_list = data["result"]["list"]
-            if not symbol_list:
-                log_error(f"Bybit {symbol} ({category}): no data returned (symbol not available)")
-                return None
-            price = float(symbol_list[0]["lastPrice"])
-            log_info(f"Bybit {category.upper()} ціна {symbol}: {price}")
-            return price
+            if category == "margin":
+                # Для Bybit margin price = spot price
+                data = self.client.get_tickers(category="spot", symbol=symbol)
+                symbol_list = data["result"]["list"]
+                if not symbol_list:
+                    log_error(f"Bybit {symbol} (margin): no data returned (symbol not available)")
+                    return None
+                price = float(symbol_list[0]["lastPrice"])
+                log_info(f"Bybit MARGIN ціна {symbol}: {price}")
+                return price
+            else:
+                data = self.client.get_tickers(category=category, symbol=symbol)
+                symbol_list = data["result"]["list"]
+                if not symbol_list:
+                    log_error(f"Bybit {symbol} ({category}): no data returned (symbol not available)")
+                    return None
+                price = float(symbol_list[0]["lastPrice"])
+                log_info(f"Bybit {category.upper()} ціна {symbol}: {price}")
+                return price
         except Exception as e:
             log_error(f"Bybit помилка отримання ціни {symbol} ({category}): {e}")
             return None
