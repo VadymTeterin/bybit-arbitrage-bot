@@ -6,6 +6,7 @@ from logger import log_info, log_error
 class BybitClient:
     def __init__(self, api_key, api_secret):
         self.client = HTTP(api_key=api_key, api_secret=api_secret)
+        self._futures_symbols = None  # Кеш ф’ючерсних символів
 
     def get_spot_symbols(self, min_volume=100000):
         """Отримує всі spot-символи USDT із обсягом >= min_volume."""
@@ -22,10 +23,30 @@ class BybitClient:
             log_error(f"Bybit помилка отримання spot-символів: {e}")
             return []
 
+    def get_futures_symbols(self):
+        """Отримує всі доступні linear futures-символи USDT для фільтрації."""
+        if self._futures_symbols is not None:
+            return self._futures_symbols
+        try:
+            data = self.client.get_tickers(category="linear")
+            self._futures_symbols = set(
+                item["symbol"] for item in data["result"]["list"]
+                if item["symbol"].endswith("USDT")
+            )
+            log_info(f"Bybit: кешовано {len(self._futures_symbols)} futures-символів")
+            return self._futures_symbols
+        except Exception as e:
+            log_error(f"Bybit помилка отримання futures-символів: {e}")
+            return set()
+
     def get_price(self, symbol, category="spot"):
         try:
             data = self.client.get_tickers(category=category, symbol=symbol)
-            price = float(data["result"]["list"][0]["lastPrice"])
+            symbol_list = data["result"]["list"]
+            if not symbol_list:
+                log_error(f"Bybit {symbol} ({category}): no data returned (symbol not available)")
+                return None
+            price = float(symbol_list[0]["lastPrice"])
             log_info(f"Bybit {category.upper()} ціна {symbol}: {price}")
             return price
         except Exception as e:
