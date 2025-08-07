@@ -2,9 +2,6 @@
 import asyncio
 
 async def get_spot_futures_arbitrage(okx, symbols, config):
-    """
-    Повертає топ-5 монет з найбільшим арбітражем між спотом та ф'ючерсами на OKX.
-    """
     results = []
     for symbol_data in symbols:
         symbol = symbol_data["symbol"]
@@ -26,9 +23,6 @@ async def get_spot_futures_arbitrage(okx, symbols, config):
     return sorted(results, key=lambda x: x['difference'], reverse=True)[:5]
 
 async def get_margin_futures_arbitrage(okx, symbols, config):
-    """
-    Повертає топ-5 монет з найбільшим арбітражем між маржею та ф'ючерсами на OKX.
-    """
     results = []
     for symbol_data in symbols:
         symbol = symbol_data["symbol"]
