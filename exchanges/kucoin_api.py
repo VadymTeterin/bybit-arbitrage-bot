@@ -1,7 +1,6 @@
-# exchanges/kucoin_api.py
-# Kucoin API-клієнт для мультибіржового арбітражного бота (v3.0m_05-08-25)
 import ccxt
 from logger import log_info, log_error
+import time
 
 class KucoinClient:
     def __init__(self, api_key, api_secret):
@@ -9,7 +8,8 @@ class KucoinClient:
             'apiKey': api_key,
             'secret': api_secret,
         })
-        self._futures_symbols = None  # Кеш ф'ючерсних символів
+        self._futures_symbols = None
+        self._futures_symbols_last_update = 0
 
     def get_spot_symbols(self, min_volume=100000):
         try:
@@ -26,19 +26,21 @@ class KucoinClient:
             return []
 
     def get_futures_symbols(self):
-        """Отримує всі доступні swap futures символи USDT для фільтрації."""
-        if self._futures_symbols is not None:
+        cache_lifetime = 60 * 60
+        now = time.time()
+        if self._futures_symbols is not None and now - self._futures_symbols_last_update < cache_lifetime:
             return self._futures_symbols
         try:
             markets = self.client.fetch_markets()
             self._futures_symbols = set(
                 m['symbol'] for m in markets if m['type'] == 'swap' and m['symbol'].endswith(":USDT")
             )
-            log_info(f"Kucoin: кешовано {len(self._futures_symbols)} futures-символів")
+            self._futures_symbols_last_update = now
+            log_info(f"Kucoin: кешовано {len(self._futures_symbols)} futures-символів (оновлено)")
             return self._futures_symbols
         except Exception as e:
             log_error(f"Kucoin помилка отримання futures-символів: {e}")
-            return set()
+            return self._futures_symbols if self._futures_symbols else set()
 
     def get_price(self, symbol, category="spot"):
         try:
