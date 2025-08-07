@@ -1,4 +1,5 @@
-# exchanges/bybit_api.py (для v3.0m_05-08-25)
+# exchanges/bybit_api.py
+# Bybit API-клієнт для мультибіржового арбітражного бота (v3.0m_05-08-25)
 from pybit.unified_trading import HTTP
 from logger import log_info, log_error
 
@@ -30,5 +31,3 @@ class BybitClient:
         except Exception as e:
             log_error(f"Bybit помилка отримання ціни {symbol} ({category}): {e}")
             return None
-
-
