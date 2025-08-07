@@ -1,54 +1,51 @@
-# exchanges/bybit_api.py
-# Bybit API-клієнт для мультибіржового арбітражного бота (v3.0m_05-08-25)
-from pybit.unified_trading import HTTP
-from logger import log_info, log_error
+# Алгоритми для пошуку арбітражу SPOT-Ф'ЮЧЕРСИ та МАРЖА-Ф'ЮЧЕРСИ на Bybit
+import asyncio
 
-class BybitClient:
-    def __init__(self, api_key, api_secret):
-        self.client = HTTP(api_key=api_key, api_secret=api_secret)
-        self._futures_symbols = None  # Кеш ф’ючерсних символів
+async def get_spot_futures_arbitrage(bybit, symbols, config):
+    results = []
+    futures_symbols = bybit.get_futures_symbols()
+    for symbol_data in symbols:
+        symbol = symbol_data["symbol"]
+        # Перевіряємо, що символ реально є у futures!
+        if symbol not in futures_symbols:
+            continue
+        spot_price = bybit.get_price(symbol, category="spot")
+        futures_price = bybit.get_price(symbol, category="linear")
+        if spot_price and futures_price:
+            difference = (futures_price - spot_price) / spot_price * 100
+            is_special = difference >= 2
+            if difference >= config['arbitrage_difference']:
+                results.append({
+                    "symbol": symbol,
+                    "spot_price": spot_price,
+                    "futures_price": futures_price,
+                    "difference": difference,
+                    "volume": symbol_data["volume"],
+                    "is_special": is_special
+                })
+        await asyncio.sleep(0.1)
+    return sorted(results, key=lambda x: x['difference'], reverse=True)[:5]
 
-    def get_spot_symbols(self, min_volume=100000):
-        """Отримує всі spot-символи USDT із обсягом >= min_volume."""
-        try:
-            data = self.client.get_tickers(category="spot")
-            symbols = [
-                {"symbol": item["symbol"], "volume": float(item.get("volume24h", 0))}
-                for item in data["result"]["list"]
-                if item["symbol"].endswith("USDT") and float(item.get("volume24h", 0)) >= min_volume
-            ]
-            log_info(f"Bybit: отримано {len(symbols)} spot-символів з обсягом >= {min_volume}")
-            return symbols
-        except Exception as e:
-            log_error(f"Bybit помилка отримання spot-символів: {e}")
-            return []
-
-    def get_futures_symbols(self):
-        """Отримує всі доступні linear futures-символи USDT для фільтрації."""
-        if self._futures_symbols is not None:
-            return self._futures_symbols
-        try:
-            data = self.client.get_tickers(category="linear")
-            self._futures_symbols = set(
-                item["symbol"] for item in data["result"]["list"]
-                if item["symbol"].endswith("USDT")
-            )
-            log_info(f"Bybit: кешовано {len(self._futures_symbols)} futures-символів")
-            return self._futures_symbols
-        except Exception as e:
-            log_error(f"Bybit помилка отримання futures-символів: {e}")
-            return set()
-
-    def get_price(self, symbol, category="spot"):
-        try:
-            data = self.client.get_tickers(category=category, symbol=symbol)
-            symbol_list = data["result"]["list"]
-            if not symbol_list:
-                log_error(f"Bybit {symbol} ({category}): no data returned (symbol not available)")
-                return None
-            price = float(symbol_list[0]["lastPrice"])
-            log_info(f"Bybit {category.upper()} ціна {symbol}: {price}")
-            return price
-        except Exception as e:
-            log_error(f"Bybit помилка отримання ціни {symbol} ({category}): {e}")
-            return None
+async def get_margin_futures_arbitrage(bybit, symbols, config):
+    results = []
+    futures_symbols = bybit.get_futures_symbols()
+    for symbol_data in symbols:
+        symbol = symbol_data["symbol"]
+        if symbol not in futures_symbols:
+            continue
+        margin_price = bybit.get_price(symbol, category="margin")
+        futures_price = bybit.get_price(symbol, category="linear")
+        if margin_price and futures_price:
+            difference = (futures_price - margin_price) / margin_price * 100
+            is_special = difference >= 2
+            if difference >= config['arbitrage_difference']:
+                results.append({
+                    "symbol": symbol,
+                    "margin_price": margin_price,
+                    "futures_price": futures_price,
+                    "difference": difference,
+                    "volume": symbol_data["volume"],
+                    "is_special": is_special
+                })
+        await asyncio.sleep(0.1)
+    return sorted(results, key=lambda x: x['difference'], reverse=True)[:5]
