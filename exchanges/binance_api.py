@@ -11,11 +11,12 @@ class BinanceClient:
     def get_spot_symbols(self, min_volume=100000):
         """Отримує всі spot-символи USDT із обсягом >= min_volume."""
         try:
-            tickers = self.client.get_ticker_24hr()
+            # Використовуємо get_ticker() для отримання даних по всіх парах
+            tickers = self.client.get_ticker()
             symbols = [
-                {"symbol": t["symbol"], "volume": float(t["quoteVolume"])}
+                {"symbol": t["symbol"], "volume": float(t.get("quoteVolume", 0))}
                 for t in tickers
-                if t["symbol"].endswith("USDT") and float(t["quoteVolume"]) >= min_volume
+                if t["symbol"].endswith("USDT") and float(t.get("quoteVolume", 0)) >= min_volume
             ]
             log_info(f"Binance: отримано {len(symbols)} spot-символів з обсягом >= {min_volume}")
             return symbols
@@ -54,7 +55,7 @@ class BinanceClient:
                 log_info(f"Binance FUTURES ціна {symbol}: {price}")
                 return price
             elif category == "margin":
-                # Margin price = spot price (якщо потрібно — тут можна реалізувати через spot)
+                # Margin price = spot price (для Binance)
                 price = float(self.client.get_symbol_ticker(symbol=symbol)["price"])
                 log_info(f"Binance MARGIN ціна {symbol}: {price}")
                 return price
