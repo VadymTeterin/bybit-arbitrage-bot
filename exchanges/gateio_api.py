@@ -9,6 +9,7 @@ class GateioClient:
             'apiKey': api_key,
             'secret': api_secret,
         })
+        self._futures_symbols = None
 
     def get_spot_symbols(self, min_volume=100000):
         try:
@@ -24,25 +25,35 @@ class GateioClient:
             log_error(f"Gateio помилка отримання spot-символів: {e}")
             return []
 
+    def get_futures_symbols(self):
+        if self._futures_symbols is not None:
+            return self._futures_symbols
+        try:
+            markets = self.client.fetch_markets()
+            self._futures_symbols = set(
+                m['symbol'] for m in markets if m['type'] == 'swap' and m['symbol'].endswith(":USDT")
+            )
+            log_info(f"Gateio: кешовано {len(self._futures_symbols)} futures-символів")
+            return self._futures_symbols
+        except Exception as e:
+            log_error(f"Gateio помилка отримання futures-символів: {e}")
+            return set()
+
     def get_price(self, symbol, category="spot"):
         try:
-            if category == "spot":
-                price = float(self.client.fetch_ticker(symbol)["last"])
-                log_info(f"Gateio SPOT ціна {symbol}: {price}")
+            if category == "spot" or category == "margin":
+                ticker = self.client.fetch_ticker(symbol)
+                price = float(ticker["last"])
+                log_info(f"Gateio {category.upper()} ціна {symbol}: {price}")
                 return price
             elif category == "linear":
-                # futures (swap) — шукаємо через fetch_markets
-                markets = self.client.fetch_markets()
-                fut_market = next((m for m in markets if m['base'] in symbol and m['type'] == 'swap'), None)
-                if fut_market:
-                    fut_symbol = fut_market['symbol']
-                    price = float(self.client.fetch_ticker(fut_symbol)["last"])
-                    log_info(f"Gateio FUTURES ціна {fut_symbol}: {price}")
-                    return price
-                return None
-            elif category == "margin":
-                price = float(self.client.fetch_ticker(symbol)["last"])
-                log_info(f"Gateio MARGIN ціна {symbol}: {price}")
+                futures_symbols = self.get_futures_symbols()
+                if symbol not in futures_symbols:
+                    log_error(f"Gateio {symbol} (linear): symbol not available for futures")
+                    return None
+                ticker = self.client.fetch_ticker(symbol)
+                price = float(ticker["last"])
+                log_info(f"Gateio FUTURES ціна {symbol}: {price}")
                 return price
             else:
                 log_error(f"Gateio: невідомий тип ринку {category}")
