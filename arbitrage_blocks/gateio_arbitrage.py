@@ -1,10 +1,13 @@
-# Алгоритми для пошуку арбітражу SPOT-Ф'ЮЧЕРСИ та МАРЖА-Ф'ЮЧЕРСИ на Gate.io
+# Алгоритми для пошуку арбітражу SPOT-Ф'ЮЧЕРСИ та МАРЖА-Ф'ЮЧЕРСИ на Gate.io (v3.0m_05-08-25)
 import asyncio
 
 async def get_spot_futures_arbitrage(gateio, symbols, config):
     results = []
+    futures_symbols = gateio.get_futures_symbols()
     for symbol_data in symbols:
         symbol = symbol_data["symbol"]
+        if symbol not in futures_symbols:
+            continue
         spot_price = gateio.get_price(symbol, category="spot")
         futures_price = gateio.get_price(symbol, category="linear")
         if spot_price and futures_price:
@@ -24,8 +27,11 @@ async def get_spot_futures_arbitrage(gateio, symbols, config):
 
 async def get_margin_futures_arbitrage(gateio, symbols, config):
     results = []
+    futures_symbols = gateio.get_futures_symbols()
     for symbol_data in symbols:
         symbol = symbol_data["symbol"]
+        if symbol not in futures_symbols:
+            continue
         margin_price = gateio.get_price(symbol, category="margin")
         futures_price = gateio.get_price(symbol, category="linear")
         if margin_price and futures_price:
