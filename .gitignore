@@ -5,3 +5,31 @@ bot.log
 .coverage
 .github/
 arbitrage_history.csv
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+.idea/
+
+# Env
+.venv/
+venv/
+env/
+*.env
+
+# Data & cache
+*.log
+*.pkl
+*.sqlite
+*.db
+arbitrage_history.csv
+symbols_cache.json
+
+# Config secrets
+config.yaml
+
+# OS files
+.DS_Store
