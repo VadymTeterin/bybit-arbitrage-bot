@@ -21,10 +21,14 @@ def test_log_info_and_error(caplog):
 @patch("exchanges.bybit_api.HTTP")
 def test_get_spot_symbols_success(mock_http):
     from exchanges.bybit_api import BybitClient
-    # Мокаємо відповідь біржі
-    mock_http.return_value.get_tickers.return_value = {
-        "result": {"list": [{"symbol": "BTCUSDT"}, {"symbol": "ETHUSDT"}]}
-    }
+
+    # Мокаємо відповідь біржі за допомогою side_effect
+    def fake_get_tickers(*args, **kwargs):
+        return {
+            "result": {"list": [{"symbol": "BTCUSDT"}, {"symbol": "ETHUSDT"}]}
+        }
+
+    mock_http.return_value.get_tickers.side_effect = fake_get_tickers
     client = BybitClient("key", "secret")
     symbols = client.get_spot_symbols()
     assert "BTCUSDT" in symbols
@@ -42,9 +46,11 @@ def test_get_spot_symbols_api_error(mock_http):
 @patch("exchanges.bybit_api.HTTP")
 def test_get_price_success(mock_http):
     from exchanges.bybit_api import BybitClient
-    mock_http.return_value.get_tickers.return_value = {
-        "result": {"list": [{"lastPrice": "23456"}]}
-    }
+
+    def fake_get_tickers(*args, **kwargs):
+        return {"result": {"list": [{"lastPrice": "23456"}]}}
+
+    mock_http.return_value.get_tickers.side_effect = fake_get_tickers
     client = BybitClient("key", "secret")
     price = client.get_price("BTCUSDT")
     assert price == 23456.0
