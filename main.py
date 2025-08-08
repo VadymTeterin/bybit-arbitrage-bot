@@ -1,7 +1,5 @@
-# main.py (для v3.0m_05-08-25)
 import asyncio
 import yaml
-import time
 from datetime import datetime
 
 from telegram_bot import TelegramNotifier
@@ -10,42 +8,18 @@ from cache.cache_manager import CacheManager
 from utils.history_manager import HistoryManager
 from formatters.message_formatter import format_exchange_report
 
-# ==== Імпорт API-клієнтів та арбітраж-блоків для всіх бірж ====
-from exchanges.bybit_api import BybitClient
+from exchange_manager import ExchangeManager
+
+# === Імпорт арбітражних блоків для всіх бірж ===
 from arbitrage_blocks.bybit_arbitrage import get_spot_futures_arbitrage as bybit_arbitrage, get_margin_futures_arbitrage as bybit_margin_arbitrage
-
-from exchanges.binance_api import BinanceClient
 from arbitrage_blocks.binance_arbitrage import get_spot_futures_arbitrage as binance_arbitrage, get_margin_futures_arbitrage as binance_margin_arbitrage
-
-from exchanges.okx_api import OKXClient
 from arbitrage_blocks.okx_arbitrage import get_spot_futures_arbitrage as okx_arbitrage, get_margin_futures_arbitrage as okx_margin_arbitrage
-
-from exchanges.kucoin_api import KucoinClient
 from arbitrage_blocks.kucoin_arbitrage import get_spot_futures_arbitrage as kucoin_arbitrage, get_margin_futures_arbitrage as kucoin_margin_arbitrage
-
-from exchanges.gateio_api import GateioClient
 from arbitrage_blocks.gateio_arbitrage import get_spot_futures_arbitrage as gateio_arbitrage, get_margin_futures_arbitrage as gateio_margin_arbitrage
-
-from exchanges.bingx_api import BingxClient
 from arbitrage_blocks.bingx_arbitrage import get_spot_futures_arbitrage as bingx_arbitrage, get_margin_futures_arbitrage as bingx_margin_arbitrage
-
-from exchanges.mexc_api import MexcClient
 from arbitrage_blocks.mexc_arbitrage import get_spot_futures_arbitrage as mexc_arbitrage, get_margin_futures_arbitrage as mexc_margin_arbitrage
-
-from exchanges.htx_api import HtxClient
 from arbitrage_blocks.htx_arbitrage import get_spot_futures_arbitrage as htx_arbitrage, get_margin_futures_arbitrage as htx_margin_arbitrage
 
-# ==== Мапи для гнучкого підключення ====
-API_CLIENTS = {
-    'bybit': BybitClient,
-    'binance': BinanceClient,
-    'okx': OKXClient,
-    'kucoin': KucoinClient,
-    'gateio': GateioClient,
-    'bingx': BingxClient,
-    'mexc': MexcClient,
-    'htx': HtxClient,
-}
 ARBITRAGE_BLOCKS = {
     'bybit': (bybit_arbitrage, bybit_margin_arbitrage),
     'binance': (binance_arbitrage, binance_margin_arbitrage),
@@ -63,37 +37,34 @@ with open('config.yaml', 'r') as file:
 notifier = TelegramNotifier(config['telegram']['bot_token'], config['telegram']['chat_id'])
 cache_manager = CacheManager(cache_ttl=600)
 history_manager = HistoryManager()
+exchange_manager = ExchangeManager(config)
 
 async def check_arbitrage():
-    enabled_exchanges = [name.capitalize() for name, exch in config['exchanges'].items() if exch.get('enabled')]
+    enabled_exchanges = [name.capitalize() for name in exchange_manager.get_active_exchanges().keys()]
     start_time = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
     start_msg = (
-        f"🌐 Арбітражний бот v3.0m успішно ЗАПУЩЕНО!\n\n"
+        f"🌐 Арбітражний бот v4.0 успішно ЗАПУЩЕНО!\n\n"
         f"🟢 Працює для бірж: <b>{', '.join(enabled_exchanges)}</b>\n"
         f"🔍 Пошук арбітражу між спотом, маржею і ф’ючерсами на кількох біржах.\n"
         f"⏰ {start_time}\n\n"
         f"Бажаю прибуткових сигналів! 🚀"
     )
     await notifier.send_message(start_msg)
-    log_info(f"Арбітражний бот v3.0m запущено для бірж: {', '.join(enabled_exchanges)}")
+    log_info(f"Арбітражний бот v4.0 запущено для бірж: {', '.join(enabled_exchanges)}")
 
     try:
         while True:
-            print("Арбітражний бот v3.0m запущено, шукаю арбітраж...")
+            print("Арбітражний бот v4.0 запущено, шукаю арбітраж...")
 
             total_msg = ""
             at_least_one_update = False
 
-            for exch_name, exch_cfg in config['exchanges'].items():
-                if not exch_cfg.get('enabled', False):
-                    continue
-
-                client_class = API_CLIENTS.get(exch_name)
+            for exch_name, client in exchange_manager.get_active_exchanges().items():
+                exch_cfg = exchange_manager.get_config(exch_name)
                 arbitrage_funcs = ARBITRAGE_BLOCKS.get(exch_name)
-                if not client_class or not arbitrage_funcs:
+                if not arbitrage_funcs:
                     continue
 
-                client = client_class(exch_cfg['api_key'], exch_cfg['api_secret'])
                 symbols = cache_manager.get_symbols(
                     exch_name,
                     client,
@@ -124,7 +95,7 @@ async def check_arbitrage():
     except Exception as e:
         stop_time = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
         error_msg = (
-            f"🌐 Арбітражний бот v3.0m ЗУПИНЕНО!\n\n"
+            f"🌐 Арбітражний бот v4.0 ЗУПИНЕНО!\n\n"
             f"🛑 Моніторинг арбітражу вимкнено через помилку.\n"
             f"⏰ {stop_time}\n\n"
             f"Помилка: {str(e)}"
@@ -136,7 +107,7 @@ async def check_arbitrage():
     except KeyboardInterrupt:
         stop_time = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
         stop_msg = (
-            f"🌐 Арбітражний бот v3.0m ЗУПИНЕНО!\n\n"
+            f"🌐 Арбітражний бот v4.0 ЗУПИНЕНО!\n\n"
             f"🛑 Моніторинг арбітражу вимкнено вручну.\n"
             f"⏰ {stop_time}\n\n"
             f"Бот коректно зупинено за запитом користувача."
@@ -147,7 +118,7 @@ async def check_arbitrage():
     finally:
         stop_time = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
         final_msg = (
-            f"🌐 Арбітражний бот v3.0m ЗУПИНЕНО!\n\n"
+            f"🌐 Арбітражний бот v4.0 ЗУПИНЕНО!\n\n"
             f"🛑 Моніторинг арбітражу вимкнено.\n"
             f"⏰ {stop_time}\n\n"
             f"Перевір роботу, якщо зупинка була неочікуваною!"
