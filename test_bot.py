@@ -18,21 +18,19 @@ def test_log_info_and_error(caplog):
 
 # --- Unit tests для exchanges/bybit_api.py ---
 
-@patch("exchanges.bybit_api.HTTP")
-def test_get_spot_symbols_success(mock_http):
+def test_get_spot_symbols_success():
     from exchanges.bybit_api import BybitClient
 
-    # Мокаємо інстанс HTTP (важливо — налаштовуємо до створення BybitClient)
-    instance = mock_http.return_value
-
+    fake_client = MagicMock()
     def fake_get_tickers(*args, **kwargs):
         return {
             "result": {"list": [{"symbol": "BTCUSDT"}, {"symbol": "ETHUSDT"}]}
         }
-
-    instance.get_tickers.side_effect = fake_get_tickers
+    fake_client.get_tickers.side_effect = fake_get_tickers
 
     client = BybitClient("key", "secret")
+    client.client = fake_client  # Примусово підміняємо HTTP-клієнт на мок
+
     symbols = client.get_spot_symbols()
     print("SPOT SYMBOLS:", symbols)  # Для діагностики, можна прибрати
     assert "BTCUSDT" in symbols
@@ -44,6 +42,7 @@ def test_get_spot_symbols_api_error(mock_http):
     instance = mock_http.return_value
     instance.get_tickers.side_effect = Exception("fail")
     client = BybitClient("key", "secret")
+    client.client = instance
     symbols = client.get_spot_symbols()
     assert symbols == []
 
@@ -58,6 +57,7 @@ def test_get_price_success(mock_http):
 
     instance.get_tickers.side_effect = fake_get_tickers
     client = BybitClient("key", "secret")
+    client.client = instance
     price = client.get_price("BTCUSDT")
     assert price == 23456.0
 
@@ -67,6 +67,7 @@ def test_get_price_api_error(mock_http):
     instance = mock_http.return_value
     instance.get_tickers.side_effect = Exception("fail")
     client = BybitClient("key", "secret")
+    client.client = instance
     price = client.get_price("BTCUSDT")
     assert price is None
 
