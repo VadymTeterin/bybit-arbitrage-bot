@@ -20,6 +20,8 @@ from arbitrage_blocks.bingx_arbitrage import get_spot_futures_arbitrage as bingx
 from arbitrage_blocks.mexc_arbitrage import get_spot_futures_arbitrage as mexc_arbitrage, get_margin_futures_arbitrage as mexc_margin_arbitrage
 from arbitrage_blocks.htx_arbitrage import get_spot_futures_arbitrage as htx_arbitrage, get_margin_futures_arbitrage as htx_margin_arbitrage
 
+from exchanges.bybit_ws import BybitWSClient
+
 ARBITRAGE_BLOCKS = {
     'bybit': (bybit_arbitrage, bybit_margin_arbitrage),
     'binance': (binance_arbitrage, binance_margin_arbitrage),
@@ -39,6 +41,52 @@ cache_manager = CacheManager(cache_ttl=600)
 history_manager = HistoryManager()
 exchange_manager = ExchangeManager(config)
 
+# === Додаємо WebSocket моніторинг для Bybit ===
+latest_prices = {
+    'spot': {},
+    'linear': {},
+}
+
+async def ws_price_update(data, market_type):
+    symbol = data["symbol"]
+    price = float(data["lastPrice"])
+    latest_prices[market_type][symbol] = price
+
+    # Перевіряємо чи є ціна на споті та ф’ючерсі
+    if symbol in latest_prices['spot'] and symbol in latest_prices['linear']:
+        spot_price = latest_prices['spot'][symbol]
+        futures_price = latest_prices['linear'][symbol]
+        diff = abs(futures_price - spot_price) / spot_price * 100
+
+        threshold = config.get("bybit", {}).get("arbitrage_difference", 1)
+        # Антиспам – не спамити одне і те саме
+        alert_id = f"bybit_ws_{symbol}_{round(diff,2)}"
+        if diff >= threshold and history_manager.is_new_top('bybit', alert_id, diff):
+            msg = (
+                f"🚨 <b>LIVE Арбітраж Bybit</b>:\n"
+                f"{symbol}\n"
+                f"Спот: <code>{spot_price}</code>\n"
+                f"Ф’ючерси: <code>{futures_price}</code>\n"
+                f"Різниця: <b>{diff:.2f}%</b>"
+            )
+            await notifier.send_message(msg)
+            log_info(msg)
+            history_manager.save_top('bybit', alert_id, diff)
+
+async def run_bybit_ws():
+    bybit_client = exchange_manager.get_active_exchanges().get('bybit')
+    if not bybit_client:
+        log_info("Bybit WS: біржа неактивна")
+        return
+    # Отримуємо ТОП-5 монет Bybit з фільтром за ліквідністю
+    symbols = cache_manager.get_symbols(
+        'bybit', bybit_client,
+        config['bybit'].get('min_volume', 100000)
+    )[:5]
+    ws_client = BybitWSClient(symbols, ws_price_update)
+    await ws_client.listen()
+
+# === Класичний цикл HTTP-арбітражу (як у тебе) ===
 async def check_arbitrage():
     enabled_exchanges = [name.capitalize() for name in exchange_manager.get_active_exchanges().keys()]
     start_time = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
@@ -75,7 +123,6 @@ async def check_arbitrage():
                 top_spot = await get_spot_arbitrage(client, symbols, config)
                 top_margin = await get_margin_arbitrage(client, symbols, config)
 
-                # ---- антиспам через history_manager ----
                 if history_manager.is_new_top(exch_name, 'spot', top_spot) or history_manager.is_new_top(exch_name, 'margin', top_margin):
                     at_least_one_update = True
                     msg = format_exchange_report(exch_name, top_spot, top_margin)
@@ -126,5 +173,11 @@ async def check_arbitrage():
         await notifier.send_message(final_msg)
         log_info(final_msg)
 
+# === Запуск одразу двох процесів: HTTP та WS ===
 if __name__ == "__main__":
-    asyncio.run(check_arbitrage())
+    async def main():
+        await asyncio.gather(
+            check_arbitrage(),   # класичний цикл
+            run_bybit_ws(),      # WebSocket моніторинг Bybit
+        )
+    asyncio.run(main())
