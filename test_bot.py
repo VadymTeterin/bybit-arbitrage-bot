@@ -22,7 +22,7 @@ def test_log_info_and_error(caplog):
 @pytest.mark.asyncio
 @patch("bybit_api.HTTP")
 def test_get_spot_symbols_success(mock_http):
-    from bybit_api import BybitClient
+    from exchanges.bybit_api import BybitClient
     # Мокаємо відповідь біржі
     mock_http.return_value.get_tickers.return_value = {
         "result": {"list": [{"symbol": "BTCUSDT"}, {"symbol": "ETHUSDT"}]}
@@ -33,7 +33,7 @@ def test_get_spot_symbols_success(mock_http):
 
 @patch("bybit_api.HTTP")
 def test_get_spot_symbols_api_error(mock_http):
-    from bybit_api import BybitClient
+    from exchanges.bybit_api import BybitClient
     # Провокуємо помилку
     mock_http.return_value.get_tickers.side_effect = Exception("fail")
     client = BybitClient("key", "secret")
@@ -42,7 +42,7 @@ def test_get_spot_symbols_api_error(mock_http):
 
 @patch("bybit_api.HTTP")
 def test_get_price_success(mock_http):
-    from bybit_api import BybitClient
+    from exchanges.bybit_api import BybitClient
     mock_http.return_value.get_tickers.return_value = {
         "result": {"list": [{"lastPrice": "23456"}]}
     }
@@ -52,7 +52,7 @@ def test_get_price_success(mock_http):
 
 @patch("bybit_api.HTTP")
 def test_get_price_api_error(mock_http):
-    from bybit_api import BybitClient
+    from exchanges.bybit_api import BybitClient
     mock_http.return_value.get_tickers.side_effect = Exception("fail")
     client = BybitClient("key", "secret")
     price = client.get_price("BTCUSDT")
