@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.abspath('.'))
+
 import pytest
 import asyncio
 from unittest.mock import patch, AsyncMock, MagicMock
