@@ -6,7 +6,7 @@ class BybitWSClient:
     def __init__(self, symbols, on_price_update, is_testnet=False):
         """
         symbols: список монет (наприклад, ["BTCUSDT", "ETHUSDT"])
-        on_price_update: функція-обробник для нових цін (callable)
+        on_price_update: асинхронна функція-обробник для нових цін (callable)
         is_testnet: чи використовувати тестнет Bybit
         """
         self.symbols = symbols
@@ -41,14 +41,14 @@ class BybitWSClient:
                 # Забираємо дані зі спота
                 spot_data = self.ws_spot.fetch_message()
                 if spot_data and "data" in spot_data:
-                    self.on_price_update(spot_data["data"], "spot")
+                    await self.on_price_update(spot_data["data"], "spot")
                 # Забираємо дані з ф’ючерсів
                 linear_data = self.ws_linear.fetch_message()
                 if linear_data and "data" in linear_data:
-                    self.on_price_update(linear_data["data"], "linear")
+                    await self.on_price_update(linear_data["data"], "linear")
                 await asyncio.sleep(0.01)  # Дуже короткий інтервал для мінімальної затримки
         except Exception as e:
             log_error(f"WebSocket: помилка при прослуховуванні — {e}")
-            # Можна реалізувати reconnect
+            # Автоматичний reconnect при помилці
             await asyncio.sleep(2)
             await self.listen()
