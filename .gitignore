@@ -4,3 +4,4 @@ __pycache__/
 bot.log
 .coverage
 .github/
+arbitrage_history.csv

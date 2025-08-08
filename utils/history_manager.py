@@ -14,4 +14,9 @@ class HistoryManager:
         return False
 
     def save_top(self, exch_name, market_type, top):
+        # Додаємо перевірку на існування exch_name та market_type!
+        if exch_name not in self.prev_tops:
+            self.prev_tops[exch_name] = {"spot": [], "margin": []}
+        if market_type not in self.prev_tops[exch_name]:
+            self.prev_tops[exch_name][market_type] = []
         self.prev_tops[exch_name][market_type] = top.copy() if top else []
