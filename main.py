@@ -58,7 +58,7 @@ async def ws_price_update(data, market_type):
         futures_price = latest_prices['linear'][symbol]
         diff = abs(futures_price - spot_price) / spot_price * 100
 
-        threshold = config.get("bybit", {}).get("arbitrage_difference", 1)
+        threshold = config['exchanges']['bybit'].get("arbitrage_difference", 1)
         # Антиспам – не спамити одне і те саме
         alert_id = f"bybit_ws_{symbol}_{round(diff,2)}"
         if diff >= threshold and history_manager.is_new_top('bybit', alert_id, diff):
@@ -81,7 +81,7 @@ async def run_bybit_ws():
     # Отримуємо ТОП-5 монет Bybit з фільтром за ліквідністю
     symbols = cache_manager.get_symbols(
         'bybit', bybit_client,
-        config['bybit'].get('min_volume', 100000)
+        config['exchanges']['bybit'].get('min_volume', 100000)
     )[:5]
     ws_client = BybitWSClient(symbols, ws_price_update)
     await ws_client.listen()
