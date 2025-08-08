@@ -22,23 +22,27 @@ def test_log_info_and_error(caplog):
 def test_get_spot_symbols_success(mock_http):
     from exchanges.bybit_api import BybitClient
 
-    # Мокаємо відповідь біржі за допомогою side_effect
+    # Мокаємо інстанс HTTP (важливо — налаштовуємо до створення BybitClient)
+    instance = mock_http.return_value
+
     def fake_get_tickers(*args, **kwargs):
         return {
             "result": {"list": [{"symbol": "BTCUSDT"}, {"symbol": "ETHUSDT"}]}
         }
 
-    mock_http.return_value.get_tickers.side_effect = fake_get_tickers
+    instance.get_tickers.side_effect = fake_get_tickers
+
     client = BybitClient("key", "secret")
     symbols = client.get_spot_symbols()
+    print("SPOT SYMBOLS:", symbols)  # Для діагностики, можна прибрати
     assert "BTCUSDT" in symbols
     assert "ETHUSDT" in symbols
 
 @patch("exchanges.bybit_api.HTTP")
 def test_get_spot_symbols_api_error(mock_http):
     from exchanges.bybit_api import BybitClient
-    # Провокуємо помилку
-    mock_http.return_value.get_tickers.side_effect = Exception("fail")
+    instance = mock_http.return_value
+    instance.get_tickers.side_effect = Exception("fail")
     client = BybitClient("key", "secret")
     symbols = client.get_spot_symbols()
     assert symbols == []
@@ -47,10 +51,12 @@ def test_get_spot_symbols_api_error(mock_http):
 def test_get_price_success(mock_http):
     from exchanges.bybit_api import BybitClient
 
+    instance = mock_http.return_value
+
     def fake_get_tickers(*args, **kwargs):
         return {"result": {"list": [{"lastPrice": "23456"}]}}
 
-    mock_http.return_value.get_tickers.side_effect = fake_get_tickers
+    instance.get_tickers.side_effect = fake_get_tickers
     client = BybitClient("key", "secret")
     price = client.get_price("BTCUSDT")
     assert price == 23456.0
@@ -58,7 +64,8 @@ def test_get_price_success(mock_http):
 @patch("exchanges.bybit_api.HTTP")
 def test_get_price_api_error(mock_http):
     from exchanges.bybit_api import BybitClient
-    mock_http.return_value.get_tickers.side_effect = Exception("fail")
+    instance = mock_http.return_value
+    instance.get_tickers.side_effect = Exception("fail")
     client = BybitClient("key", "secret")
     price = client.get_price("BTCUSDT")
     assert price is None
