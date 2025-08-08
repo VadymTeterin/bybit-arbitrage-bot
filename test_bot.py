@@ -3,7 +3,6 @@ import os
 sys.path.append(os.path.abspath('.'))
 
 import pytest
-import asyncio
 from unittest.mock import patch, AsyncMock, MagicMock
 
 # --- Unit tests для logger.py ---
@@ -19,7 +18,6 @@ def test_log_info_and_error(caplog):
 
 # --- Unit tests для exchanges/bybit_api.py ---
 
-@pytest.mark.asyncio
 @patch("exchanges.bybit_api.HTTP")
 def test_get_spot_symbols_success(mock_http):
     from exchanges.bybit_api import BybitClient
@@ -30,6 +28,7 @@ def test_get_spot_symbols_success(mock_http):
     client = BybitClient("key", "secret")
     symbols = client.get_spot_symbols()
     assert "BTCUSDT" in symbols
+    assert "ETHUSDT" in symbols
 
 @patch("exchanges.bybit_api.HTTP")
 def test_get_spot_symbols_api_error(mock_http):
@@ -68,7 +67,10 @@ async def test_send_message_success(mock_bot):
     mock_instance.send_message = AsyncMock()
     notifier = TelegramNotifier("token", 1111)
     await notifier.send_message("Test")
-    mock_instance.send_message.assert_called_once_with(chat_id=1111, text="Test")
+    mock_instance.send_message.assert_called_once()
+    args, kwargs = mock_instance.send_message.call_args
+    assert kwargs["chat_id"] == 1111
+    assert kwargs["text"] == "Test"
 
 @pytest.mark.asyncio
 @patch("telegram_bot.Bot")
@@ -82,6 +84,4 @@ async def test_send_message_error(mock_bot):
     mock_instance.send_message.assert_called_once()
 
 # --- Integration test: логіка арбітражу ---
-
-# ⚠️ Поки що integration test може не працювати через patch — залиш основні unit тести для стабільності!
-# Якщо хочеш тестувати інтеграцію — краще зроби окремий тест і вкажи його явно.
+# Поки залишаємо лише unit-тести для стабільності.
