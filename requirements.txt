@@ -1,0 +1,5 @@
+pybit
+python-telegram-bot
+pyyaml
+pytest
+pytest-asyncio
