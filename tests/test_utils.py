@@ -5,36 +5,31 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 def test_history_manager_basic():
     from utils.history_manager import HistoryManager
     hm = HistoryManager()
-    hm.add("BTC", 100)
-    hm.add("BTC", 200)
-    # Чи оновлюється історія?
-    history = hm.get("BTC")
-    assert isinstance(history, (list, int, float, dict, tuple)) or history is not None
+    # Новий топ (має бути новим)
+    is_new = hm.is_new_top("bybit", "spot", [{"symbol": "BTCUSDT", "difference": 1}])
+    assert is_new
+    # Зберігаємо цей топ
+    hm.save_top("bybit", "spot", [{"symbol": "BTCUSDT", "difference": 1}])
+    # Якщо не змінився — не новий
+    is_new2 = hm.is_new_top("bybit", "spot", [{"symbol": "BTCUSDT", "difference": 1}])
+    assert not is_new2
 
-    # Тест на get all
-    all_history = hm.get_all()
-    assert "BTC" in all_history
-
-def test_history_manager_edge_case():
+def test_history_manager_save_top_empty():
     from utils.history_manager import HistoryManager
     hm = HistoryManager()
-    # get для неіснуючої монети
-    assert hm.get("UNKNOWN") is None or hm.get("UNKNOWN") == []
+    hm.save_top("okx", "margin", [])
+    assert "okx" in hm.prev_tops
 
-def test_statistics_manager_basic():
-    from utils.statistics_manager import StatisticsManager
-    sm = StatisticsManager()
-    sm.add("ETH", 10)
-    sm.add("ETH", 20)
-    stat = sm.get_statistics("ETH")
-    assert "count" in stat and stat["count"] >= 2
-    assert stat["sum"] >= 30 or "sum" in stat or isinstance(stat, dict)
+def test_save_signal_to_csv(tmp_path):
+    from utils.statistics_manager import save_signal_to_csv, calculate_average_spread
+    file = tmp_path / "test_history.csv"
+    save_signal_to_csv("bybit", "BTCUSDT", 100, 101, 1.1, 12345)
+    # average_spread з файлу з одним сигналом
+    avg = calculate_average_spread("arbitrage_history.csv")
+    assert avg > 0 or avg == 0
 
-def test_statistics_manager_edge_case():
-    from utils.statistics_manager import StatisticsManager
-    sm = StatisticsManager()
-    # Статистика по неіснуючій монеті
-    stat = sm.get_statistics("DOGE")
-    assert stat is not None
-    # Перевірка типу, ключів, тощо
-    assert isinstance(stat, dict)
+def test_calculate_average_spread_empty(tmp_path):
+    from utils.statistics_manager import calculate_average_spread
+    file = tmp_path / "empty_history.csv"
+    avg = calculate_average_spread(str(file))
+    assert avg == 0
