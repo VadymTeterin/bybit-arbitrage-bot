@@ -1,13 +1,15 @@
-# Алгоритми для пошуку арбітражу SPOT-Ф'ЮЧЕРСИ та МАРЖА-Ф'ЮЧЕРСИ на HTX (v3.0m_05-08-25)
+# Алгоритми для пошуку арбітражу SPOT-Ф'ЮЧЕРСИ та МАРЖА-Ф'ЮЧЕРСИ на HTX (v4.0m_08-08-25)
 import asyncio
 
 async def get_spot_futures_arbitrage(htx, symbols, config):
     results = []
-    futures_symbols = htx.get_futures_symbols()
-    for symbol_data in symbols:
+    spot_symbols_set = set([s["symbol"] for s in symbols])
+    futures_symbols_set = set(htx.get_futures_symbols())
+    common_symbols = spot_symbols_set & futures_symbols_set
+    filtered_symbols = [s for s in symbols if s["symbol"] in common_symbols]
+
+    for symbol_data in filtered_symbols:
         symbol = symbol_data["symbol"]
-        if symbol not in futures_symbols:
-            continue
         spot_price = htx.get_price(symbol, category="spot")
         futures_price = htx.get_price(symbol, category="linear")
         if spot_price and futures_price:
@@ -27,11 +29,13 @@ async def get_spot_futures_arbitrage(htx, symbols, config):
 
 async def get_margin_futures_arbitrage(htx, symbols, config):
     results = []
-    futures_symbols = htx.get_futures_symbols()
-    for symbol_data in symbols:
+    spot_symbols_set = set([s["symbol"] for s in symbols])
+    futures_symbols_set = set(htx.get_futures_symbols())
+    common_symbols = spot_symbols_set & futures_symbols_set
+    filtered_symbols = [s for s in symbols if s["symbol"] in common_symbols]
+
+    for symbol_data in filtered_symbols:
         symbol = symbol_data["symbol"]
-        if symbol not in futures_symbols:
-            continue
         margin_price = htx.get_price(symbol, category="margin")
         futures_price = htx.get_price(symbol, category="linear")
         if margin_price and futures_price:
