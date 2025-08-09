@@ -10,7 +10,6 @@ from formatters.message_formatter import format_exchange_report
 
 from exchange_manager import ExchangeManager
 
-# === Імпорт арбітражних блоків для всіх бірж ===
 from arbitrage_blocks.bybit_arbitrage import get_spot_futures_arbitrage as bybit_arbitrage, get_margin_futures_arbitrage as bybit_margin_arbitrage
 from arbitrage_blocks.binance_arbitrage import get_spot_futures_arbitrage as binance_arbitrage, get_margin_futures_arbitrage as binance_margin_arbitrage
 from arbitrage_blocks.okx_arbitrage import get_spot_futures_arbitrage as okx_arbitrage, get_margin_futures_arbitrage as okx_margin_arbitrage
@@ -41,7 +40,6 @@ cache_manager = CacheManager(cache_ttl=600)
 history_manager = HistoryManager()
 exchange_manager = ExchangeManager(config)
 
-# === Додаємо WebSocket моніторинг для Bybit ===
 latest_prices = {
     'spot': {},
     'linear': {},
@@ -51,6 +49,9 @@ async def ws_price_update(data, market_type):
     symbol = data["symbol"]
     price = float(data["lastPrice"])
     latest_prices[market_type][symbol] = price
+
+    # Додано для дебагу — чи приходять взагалі ціни з WS
+    print(f"WS DATA: {symbol} {market_type} {price}")
 
     # Перевіряємо чи є ціна на споті та ф’ючерсі
     if symbol in latest_prices['spot'] and symbol in latest_prices['linear']:
@@ -74,19 +75,12 @@ async def ws_price_update(data, market_type):
             history_manager.save_top('bybit', alert_id, diff)
 
 async def run_bybit_ws():
-    bybit_client = exchange_manager.get_active_exchanges().get('bybit')
-    if not bybit_client:
-        log_info("Bybit WS: біржа неактивна")
-        return
-    # Отримуємо ТОП-5 монет Bybit з фільтром за ліквідністю
-    symbols = cache_manager.get_symbols(
-        'bybit', bybit_client,
-        config['exchanges']['bybit'].get('min_volume', 100000)
-    )[:5]
+    # ПІДПИСКА ЛИШЕ НА 2 МОНЕТИ — тест
+    symbols = ["BTCUSDT", "ETHUSDT"]
+    print("Підписка WS на:", symbols)
     ws_client = BybitWSClient(symbols, ws_price_update)
     await ws_client.listen()
 
-# === Класичний цикл HTTP-арбітражу (як у тебе) ===
 async def check_arbitrage():
     enabled_exchanges = [name.capitalize() for name in exchange_manager.get_active_exchanges().keys()]
     start_time = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
@@ -177,7 +171,7 @@ async def check_arbitrage():
 if __name__ == "__main__":
     async def main():
         await asyncio.gather(
-            check_arbitrage(),   # класичний цикл
-            run_bybit_ws(),      # WebSocket моніторинг Bybit
+            check_arbitrage(),
+            run_bybit_ws(),
         )
     asyncio.run(main())
