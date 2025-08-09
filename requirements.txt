@@ -3,3 +3,9 @@ python-telegram-bot
 pyyaml
 pytest
 pytest-asyncio
+
+websockets>=12
+orjson>=3.9
+PyYAML>=6
+python-telegram-bot>=20
+pybit==5.*     # у тебе вже використовується для REST
