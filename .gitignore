@@ -5,6 +5,7 @@ bot.log
 .coverage
 .github/
 arbitrage_history.csv
+bot.log*
 
 # Python bytecode
 __pycache__/
